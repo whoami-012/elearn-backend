@@ -1,0 +1,91 @@
+# ── Python ──────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# ── Virtual Environments ─────────────────────────────────
+.venv/
+venv/
+env/
+ENV/
+
+# ── Environment Variables ────────────────────────────────
+.env
+.env.*
+!.env.example
+
+# ── Database ─────────────────────────────────────────────
+*.db
+*.sqlite3
+
+# ── Alembic ──────────────────────────────────────────────
+alembic/versions/*.pyc
+
+# ── Logs ─────────────────────────────────────────────────
+*.log
+logs/
+
+# ── IDE / Editor ─────────────────────────────────────────
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+Thumbs.db
+
+# ── Testing ──────────────────────────────────────────────
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+*.pdf
+*.txt
+*.png
+*.jpg
+*.jpeg
+# ── MyPy / Type Checkers ─────────────────────────────────
+.mypy_cache/
+.dmypy.json
+
+# ── Uploads / Media ──────────────────────────────────────
+uploads/
+media/
+backend/private_uploads/
+implementation_plan.md
+project_structure.md
+Document For Educational Application.pptx.pdf
+
+# ── Docker ───────────────────────────────────────────────
+*.override.yml
+
+# Workspace-specific local files
+.codex
+*.zip
+
+# Nested project local/generated files
+servers/.git/
+servers/node_modules/
+servers/.env
+servers/.mcp.json
+
+elearn_app/.dart_tool/
+elearn_app/.flutter-plugins-dependencies
+elearn_app/.idea/
+elearn_app/build/
+elearn_app/android/.gradle/
+elearn_app/android/local.properties
+elearn_app/android/*.iml
+elearn_app/android/hs_err_pid*.log
+elearn_app/ios/Flutter/ephemeral/
+elearn_app/ios/Flutter/Generated.xcconfig
+elearn_app/ios/Flutter/flutter_export_environment.sh
+elearn_app/linux/flutter/ephemeral/
+elearn_app/macos/Flutter/ephemeral/
+elearn_app/windows/flutter/ephemeral/
