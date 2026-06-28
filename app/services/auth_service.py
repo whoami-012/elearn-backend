@@ -1,6 +1,10 @@
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, or_
 from jose import JWTError
+from google.auth.exceptions import GoogleAuthError
+from google.auth.transport import requests as google_requests
+from google.oauth2 import id_token as google_id_token
+from sqlalchemy.exc import IntegrityError
 
 from app.models.user import User
 from app.schemas.auth import RegisterRequest        # Fix #5: correct type hint (was UserCreate)
@@ -12,6 +16,7 @@ from app.core.security import (
     decode_token,
 )
 from fastapi import HTTPException, status
+from app.core.config import settings
 
 
 # 🔹 Create User (Register)
@@ -53,7 +58,7 @@ async def authenticate_user(db: AsyncSession, email: str, password: str):
     user = result.scalar_one_or_none()
 
     # Intentionally vague error — don't reveal whether email exists
-    if not user or not verify_password(password, user.password_hash):
+    if not user or not user.password_hash or not verify_password(password, user.password_hash):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
@@ -71,6 +76,104 @@ async def authenticate_user(db: AsyncSession, email: str, password: str):
             detail="Account has been deleted",
         )
 
+    return user
+
+
+def verify_google_id_token(token: str) -> dict:
+    if not settings.GOOGLE_CLIENT_ID:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Google Sign-In is not configured",
+        )
+
+    try:
+        claims = google_id_token.verify_oauth2_token(
+            token,
+            google_requests.Request(),
+            audience=settings.GOOGLE_CLIENT_ID,
+        )
+    except (ValueError, GoogleAuthError):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired Google ID token",
+        )
+
+    if not claims.get("email"):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Google account does not provide an email address",
+        )
+    if claims.get("email_verified") is not True:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Google email address is not verified",
+        )
+    if not claims.get("sub"):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google token payload",
+        )
+    return claims
+
+
+async def authenticate_google_user(db: AsyncSession, claims: dict) -> User:
+    email = claims["email"].lower().strip()
+    google_id = claims["sub"]
+    result = await db.execute(
+        select(User).where(
+            or_(func.lower(User.email) == email, User.google_id == google_id)
+        )
+    )
+    matches = result.scalars().all()
+    by_email = next((user for user in matches if user.email.lower() == email), None)
+    by_google_id = next((user for user in matches if user.google_id == google_id), None)
+
+    if by_email and by_google_id and by_email.id != by_google_id.id:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Google account is already linked to another user",
+        )
+
+    user = by_email or by_google_id
+    if user and user.email.lower() != email:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Google account email does not match the linked user",
+        )
+
+    if user:
+        if not user.is_active:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account is inactive")
+        if user.is_deleted:
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Account has been deleted")
+        user.google_id = google_id
+        user.email_verified = True
+        if claims.get("name"):
+            user.name = claims["name"]
+        if claims.get("picture"):
+            user.profile_image = claims["picture"]
+    else:
+        user = User(
+            email=email,
+            name=claims.get("name") or email.split("@", 1)[0],
+            password_hash=None,
+            role="student",
+            auth_provider="google",
+            google_id=google_id,
+            profile_image=claims.get("picture"),
+            email_verified=True,
+        )
+        db.add(user)
+
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Google account or email is already registered",
+        )
+    await db.refresh(user)
     return user
 
 

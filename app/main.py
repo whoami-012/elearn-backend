@@ -17,6 +17,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
 from app.api.v1.api import api_router
+from app.api.v1.endpoints.auth import google_router
 from app.db.init_db import init_db
 
 # ALLOWED_ORIGINS: comma-separated list set via env var in production.
@@ -42,7 +43,10 @@ async def lifespan(app: FastAPI):
       - Reserved for cleanup (e.g. closing connection pools, flushing caches).
     """
     # Startup
-    await init_db()
+    env = os.getenv("APP_ENV", "development").lower()
+
+    if env in {"development", "dev", "local"}:
+      await init_db()
     # Ensure upload directories exist
     Path("static/thumbnails").mkdir(parents=True, exist_ok=True)
     yield
@@ -82,6 +86,7 @@ app.add_middleware(
 # ---------------------------------------------------------------------------
 
 app.include_router(api_router, prefix="/api/v1")
+app.include_router(google_router, prefix="/api")
 
 # Serve uploaded files (thumbnails, etc.) as static assets
 # Access via: http://server/static/thumbnails/<filename>

@@ -79,6 +79,9 @@ class UserRead(BaseModel):
     name: str            # User's display name
     role: UserRole       # Role assigned to the user
     is_active: bool      # Whether the account is currently active
+    auth_provider: str
+    profile_image: Optional[str] = None
+    email_verified: bool
     created_at: datetime # Timestamp when the account was created
     updated_at: datetime # Timestamp of the last update
 
