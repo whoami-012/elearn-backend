@@ -197,8 +197,15 @@ async def send_message(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    message = await MessagingService(db).send_text(
+    service = MessagingService(db)
+    conversation, _ = await service.authorize_conversation(conversation_id, current_user)
+    message = await service.send_text(
         conversation_id, current_user, payload.content, payload.client_message_id
+    )
+    await connection_manager.send_to_users(
+        {conversation.participant_one_id, conversation.participant_two_id},
+        conversation.id,
+        {"event": "message.created", "data": message_response(message).model_dump(mode="json")},
     )
     return message_response(message)
 
@@ -213,12 +220,17 @@ async def send_message_upload(
     db: AsyncSession = Depends(get_db),
 ):
     service = MessagingService(db)
-    await service.authorize_conversation(conversation_id, current_user)
+    conversation, _ = await service.authorize_conversation(conversation_id, current_user)
     storage = get_message_storage()
     temp_dir = Path(settings.MESSAGE_LOCAL_STORAGE_PATH).resolve() / ".tmp"
     validated = await stream_and_validate_upload(file, temp_dir)
     message = await service.send_upload(
         conversation_id, current_user, content, client_message_id, validated, storage
+    )
+    await connection_manager.send_to_users(
+        {conversation.participant_one_id, conversation.participant_two_id},
+        conversation.id,
+        {"event": "message.created", "data": message_response(message).model_dump(mode="json")},
     )
     return message_response(message)
 
@@ -230,7 +242,18 @@ async def mark_conversation_read(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    await MessagingService(db).mark_read(conversation_id, current_user, payload.last_read_message_id)
+    service = MessagingService(db)
+    conversation, _ = await service.authorize_conversation(conversation_id, current_user)
+    await service.mark_read(conversation_id, current_user, payload.last_read_message_id)
+    await connection_manager.send_to_users(
+        {conversation.participant_one_id, conversation.participant_two_id},
+        conversation.id,
+        {
+            "event": "message.read",
+            "conversation_id": str(conversation.id),
+            "user_id": str(current_user.id),
+        },
+    )
 
 
 @router.get("/attachments/{attachment_id}")
