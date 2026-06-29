@@ -127,6 +127,13 @@ class MessagingService:
             original_filename=upload.original_filename,
             storage_key=upload.storage_key,
             mime_type=upload.mime_type,
+            attachment_type=(
+                "image"
+                if upload.mime_type.startswith("image/")
+                else "video"
+                if upload.mime_type.startswith("video/")
+                else "file"
+            ),
             file_extension=upload.extension,
             file_size=upload.file_size,
             checksum=upload.checksum,

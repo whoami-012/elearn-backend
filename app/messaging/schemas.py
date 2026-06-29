@@ -47,9 +47,13 @@ class AttachmentResponse(BaseModel):
     id: UUID
     original_filename: str
     mime_type: str
+    attachment_type: str
     file_extension: str
     file_size: int
     checksum: str
+    attachment_url: str
+    file_name: str
+    thumbnail_url: str | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -66,6 +70,13 @@ class MessageResponse(BaseModel):
     deleted_at: datetime | None
     client_message_id: str | None
     attachment: AttachmentResponse | None = None
+    attachment_url: str | None = None
+    attachment_type: str | None = None
+    mime_type: str | None = None
+    file_name: str | None = None
+    file_size: int | None = None
+    thumbnail_url: str | None = None
+    status: str = "sent"
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -77,6 +88,11 @@ class LastMessageResponse(BaseModel):
     created_at: datetime
     is_sent_by_current_user: bool
     has_attachment: bool
+    attachment_type: str | None = None
+    mime_type: str | None = None
+    file_name: str | None = None
+    file_size: int | None = None
+    thumbnail_url: str | None = None
 
 
 class ConversationSummaryResponse(BaseModel):

@@ -28,6 +28,11 @@ MIME_BY_EXTENSION = {
     "jpg": "image/jpeg",
     "jpeg": "image/jpeg",
     "png": "image/png",
+    "mp4": "video/mp4",
+    "mov": "video/quicktime",
+    "3gp": "video/3gpp",
+    "webm": "video/webm",
+    "mkv": "video/x-matroska",
 }
 
 
@@ -76,6 +81,10 @@ def _detect_mime(path: Path, extension: str) -> str:
         return "image/png"
     if header.startswith(b"\xff\xd8\xff"):
         return "image/jpeg"
+    if len(header) >= 12 and header[4:8] == b"ftyp" and extension in {"mp4", "mov", "3gp"}:
+        return MIME_BY_EXTENSION[extension]
+    if header.startswith(b"\x1a\x45\xdf\xa3") and extension in {"webm", "mkv"}:
+        return MIME_BY_EXTENSION[extension]
     if header.startswith(b"\xd0\xcf\x11\xe0\xa1\xb1\x1a\xe1"):
         if _file_contains(path, ("WordDocument".encode("utf-16le"),)):
             return MIME_BY_EXTENSION["doc"]

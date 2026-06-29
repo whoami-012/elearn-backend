@@ -50,7 +50,42 @@ def participant_response(user: User) -> ParticipantResponse:
 
 
 def message_response(message: Message) -> MessageResponse:
-    return MessageResponse.model_validate(message)
+    attachment = message.attachment
+    attachment_response = None
+    attachment_url = None
+    if attachment is not None:
+        attachment_url = f"/api/v1/messages/attachments/{attachment.id}"
+        attachment_response = {
+            "id": attachment.id,
+            "original_filename": attachment.original_filename,
+            "mime_type": attachment.mime_type,
+            "attachment_type": attachment.attachment_type,
+            "file_extension": attachment.file_extension,
+            "file_size": attachment.file_size,
+            "checksum": attachment.checksum,
+            "attachment_url": attachment_url,
+            "file_name": attachment.original_filename,
+            "thumbnail_url": attachment.thumbnail_url,
+        }
+    return MessageResponse(
+        id=message.id,
+        conversation_id=message.conversation_id,
+        sender_id=message.sender_id,
+        message_type=message.message_type,
+        content=message.content,
+        created_at=message.created_at,
+        updated_at=message.updated_at,
+        edited_at=message.edited_at,
+        deleted_at=message.deleted_at,
+        client_message_id=message.client_message_id,
+        attachment=attachment_response,
+        attachment_url=attachment_url,
+        attachment_type=attachment.attachment_type if attachment else None,
+        mime_type=attachment.mime_type if attachment else None,
+        file_name=attachment.original_filename if attachment else None,
+        file_size=attachment.file_size if attachment else None,
+        thumbnail_url=attachment.thumbnail_url if attachment else None,
+    )
 
 
 async def conversation_detail(service: MessagingService, conversation_id: UUID, current_user: User):
@@ -151,6 +186,11 @@ async def list_conversations(
                 created_at=last.created_at,
                 is_sent_by_current_user=last.sender_id == current_user.id,
                 has_attachment=last.attachment is not None,
+                attachment_type=last.attachment.attachment_type if last.attachment else None,
+                mime_type=last.attachment.mime_type if last.attachment else None,
+                file_name=last.attachment.original_filename if last.attachment else None,
+                file_size=last.attachment.file_size if last.attachment else None,
+                thumbnail_url=last.attachment.thumbnail_url if last.attachment else None,
             )
         items.append(
             ConversationSummaryResponse(

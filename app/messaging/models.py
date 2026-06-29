@@ -95,10 +95,12 @@ class MessageAttachment(Base):
     original_filename = Column(String(255), nullable=False)
     storage_key = Column(String(512), nullable=False, unique=True)
     mime_type = Column(String(128), nullable=False)
+    attachment_type = Column(String(16), nullable=False, server_default="file")
     file_extension = Column(String(16), nullable=False)
     file_size = Column(BigInteger, nullable=False)
     checksum = Column(String(64), nullable=False)
     scan_status = Column(String(20), nullable=False, server_default="clean")
+    thumbnail_url = Column(String(1024), nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, server_default=func.now())
 
     message = relationship("Message", back_populates="attachment")

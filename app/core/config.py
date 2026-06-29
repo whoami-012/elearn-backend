@@ -71,7 +71,7 @@ class Settings:
     MESSAGE_MAX_FILE_SIZE_BYTES: int = int(os.getenv("MESSAGE_MAX_FILE_SIZE_BYTES", "10485760"))
     MESSAGE_MAX_ATTACHMENTS_PER_MESSAGE: int = int(os.getenv("MESSAGE_MAX_ATTACHMENTS_PER_MESSAGE", "1"))
     MESSAGE_ALLOWED_EXTENSIONS: tuple[str, ...] = _csv_setting(
-        "MESSAGE_ALLOWED_EXTENSIONS", "pdf,doc,docx,ppt,pptx,xls,xlsx,txt,csv,jpg,jpeg,png"
+        "MESSAGE_ALLOWED_EXTENSIONS", "pdf,doc,docx,ppt,pptx,xls,xlsx,txt,csv,jpg,jpeg,png,mp4,mov,3gp,webm,mkv"
     )
     MESSAGE_RATE_LIMIT_PER_MINUTE: int = int(os.getenv("MESSAGE_RATE_LIMIT_PER_MINUTE", "30"))
     MESSAGE_CONVERSATION_RATE_LIMIT_PER_MINUTE: int = int(
