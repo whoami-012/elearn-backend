@@ -8,6 +8,13 @@ class YoutubeLessonCreate(BaseModel):
     order_index: int = Field(..., ge=0)
     is_preview: bool = False
 
+
+class YoutubeLessonUpdate(BaseModel):
+    title: str | None = Field(None, min_length=1, max_length=255)
+    video_id: str | None = None
+    order_index: int | None = Field(None, ge=0)
+    is_preview: bool | None = None
+
 class YoutubeLessonResponse(BaseModel):
     id: UUID
     course_id: UUID

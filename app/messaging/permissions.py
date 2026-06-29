@@ -26,6 +26,11 @@ ALLOWED_MESSAGE_PAIRS = {
     ("faculty", "student"),
     ("teacher", "faculty"),
     ("faculty", "teacher"),
+    ("admin", "student"),
+    ("student", "admin"),
+    ("admin", "faculty"),
+    ("faculty", "admin"),
+    ("admin", "admin"),
 }
 
 
@@ -39,6 +44,8 @@ def can_users_message(sender_role: str | Enum, receiver_role: str | Enum) -> boo
 
 
 def validate_role_pair(sender: User, receiver: User) -> None:
+    if not sender.is_active or sender.is_deleted or not receiver.is_active or receiver.is_deleted:
+        raise forbidden("USER_UNAVAILABLE", "One of the users is not available for messaging.")
     if not can_users_message(sender.role, receiver.role):
         logger.warning(
             "messaging_role_pair_denied sender_id=%s receiver_id=%s sender_role=%s receiver_role=%s",
@@ -68,6 +75,8 @@ async def _student_is_enrolled_with_instructor(
 async def validate_academic_relationship(db: AsyncSession, sender: User, receiver: User) -> None:
     sender_role = normalized_role(sender.role)
     receiver_role = normalized_role(receiver.role)
+    if "admin" in {sender_role, receiver_role}:
+        return
     allowed = False
 
     if sender_role == "student" and receiver_role in {"teacher", "faculty"}:

@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends
-from app.schemas.lesson import YoutubeLessonResponse, YoutubeLessonCreate
+from app.schemas.lesson import YoutubeLessonResponse, YoutubeLessonCreate, YoutubeLessonUpdate
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import get_current_user, get_db
@@ -53,3 +53,30 @@ async def get_yt_lessons_by_course(
         )
         for lesson in lessons
     ]
+
+
+@router.patch("/lessons/youtube/{lesson_id}", response_model=YoutubeLessonResponse)
+async def update_youtube_lesson(
+    lesson_id: UUID,
+    data: YoutubeLessonUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    lesson = await youtube_service.update_youtube_lesson(db, lesson_id, data, current_user)
+    return YoutubeLessonResponse(
+        id=lesson.id,
+        course_id=lesson.course_id,
+        title=lesson.title,
+        video_id=lesson.youtube_video_id,
+        is_preview=lesson.is_preview,
+        order_index=lesson.order_index,
+    )
+
+
+@router.delete("/lessons/youtube/{lesson_id}", status_code=204)
+async def delete_youtube_lesson(
+    lesson_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await youtube_service.delete_youtube_lesson(db, lesson_id, current_user)

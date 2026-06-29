@@ -2,6 +2,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
 from jose import JWTError, jwk, jwt
 import httpx
+from uuid import UUID
 from google.auth.exceptions import GoogleAuthError
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
@@ -18,6 +19,7 @@ from app.core.security import (
 )
 from fastapi import HTTPException, status
 from app.core.config import settings
+from app.core.permissions import require_active_user
 
 
 # 🔹 Create User (Register)
@@ -272,7 +274,7 @@ def create_tokens(user: User) -> dict:
 
 
 # 🔹 Refresh Access Token
-def refresh_access_token(refresh_token: str) -> dict:
+async def refresh_access_token(db: AsyncSession, refresh_token: str) -> dict:
     # Fix #2: decode_token raises JWTError on failure — it never returns None
     try:
         payload = decode_token(refresh_token)
@@ -290,17 +292,24 @@ def refresh_access_token(refresh_token: str) -> dict:
         )
 
     user_id = payload.get("sub")
-    user_role = payload.get("role")
-
-    if not user_id or not user_role:
+    if not user_id:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid token payload",
         )
 
-    # Fix #4: return both access AND refresh token (TokenResponse requires both)
-    return {
-        "access_token":  create_access_token(user_id, user_role),
-        "refresh_token": create_refresh_token(user_id, user_role),
-        "token_type":    "bearer",
-    }
+    try:
+        user_uuid = UUID(user_id)
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload",
+        ) from exc
+
+    result = await db.execute(select(User).where(User.id == user_uuid))
+    user = result.scalar_one_or_none()
+    if not user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not found")
+
+    require_active_user(user)
+    return create_tokens(user)

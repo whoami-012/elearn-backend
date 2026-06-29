@@ -6,6 +6,7 @@ from uuid import UUID
 from fastapi.security import OAuth2PasswordBearer
 from typing import Optional
 from app.models.user import User
+from app.core.permissions import require_active_user
 from app.core.security import decode_token
 from app.db.dependencies import get_db               # Fix #2: get_db lives here, not in session.py
 from app.repositories.user_repo import UserRepo
@@ -54,13 +55,7 @@ async def get_current_user(
         raise HTTPException(status_code=401, detail="User not found")
 
     # --- Step 4: Guard checks ---
-    if not user.is_active:
-        raise HTTPException(status_code=403, detail="User account is inactive")  # Fix #4: 403 not 401
-
-    if user.is_deleted:
-        raise HTTPException(status_code=403, detail="User account has been deleted")  # Fix #5: soft-delete guard
-
-    return user
+    return require_active_user(user)
 
 
 async def get_current_user_optional(
@@ -87,10 +82,11 @@ async def get_current_user_optional(
             return None
 
         user = await UserRepo(db).get_by_id(user_id)
-        if not user or not user.is_active or user.is_deleted:
+        if not user:
             return None
-
-        return user
+        return require_active_user(user)
 
     except JWTError:
+        return None
+    except HTTPException:
         return None

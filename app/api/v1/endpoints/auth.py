@@ -82,7 +82,7 @@ async def apple_login(payload: AppleLoginRequest, db: AsyncSession = Depends(get
 
 @router.post("/refresh", response_model=TokenResponse)
 async def refresh(payload: RefreshTokenRequest, db: AsyncSession = Depends(get_db)):
-    tokens = refresh_access_token(payload.refresh_token)
+    tokens = await refresh_access_token(db, payload.refresh_token)
     return tokens
 
 @router.get("/me", response_model=UserRead)

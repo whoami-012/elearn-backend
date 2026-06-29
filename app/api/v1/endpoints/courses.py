@@ -3,13 +3,14 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from uuid import UUID
 
 from app.db.dependencies import get_db
-from app.schemas.courses import CourseCreate, CourseResponse, CourseUpdate
+from app.schemas.courses import CourseCreate, CourseResponse, CourseUpdate, FacultyAssignmentUpdate
 from app.services.course_service import (
     create_course,
     get_courses,
     get_course_by_id,
     update_course,
     delete_course,
+    assign_course_faculty,
 )
 from app.api.deps import get_current_user
 from app.models.user import User
@@ -74,5 +75,24 @@ async def remove_course(
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only faculty or admin can delete courses",
-        )
+    )
     await delete_course(db, course_id, current_user)
+
+
+@router.patch("/{course_id}/assign-faculty", response_model=CourseResponse)
+async def assign_faculty(
+    course_id: UUID,
+    data: FacultyAssignmentUpdate,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await assign_course_faculty(db, course_id, data.faculty_id, current_user)
+
+
+@router.delete("/{course_id}/faculty-assignment", response_model=CourseResponse)
+async def remove_faculty_assignment(
+    course_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await assign_course_faculty(db, course_id, None, current_user)

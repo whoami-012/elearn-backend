@@ -11,6 +11,7 @@ from app.models.question import Question
 from app.models.attempt import Attempt
 from app.models.note import Note
 from app.models.live_class import LiveClass, LiveClassAttendance
+from app.models.audit_log import AuditLog
 from app.messaging.models import (
     ConversationReadState,
     DirectConversation,
@@ -30,6 +31,7 @@ __all__ = [
     "Note",
     "LiveClass",
     "LiveClassAttendance",
+    "AuditLog",
     "DirectConversation",
     "Message",
     "MessageAttachment",

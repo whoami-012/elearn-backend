@@ -4,7 +4,6 @@ from uuid import UUID
 from fastapi import Form
 from app.db.dependencies import get_db
 from app.schemas.note import NoteCreate, NoteUpdate, NoteResponse
-from app.models.note import Note
 from app.api.deps import get_current_user, get_current_user_optional
 from app.services import note_service
 from fastapi import File, UploadFile
@@ -34,6 +33,31 @@ async def create_note(
         is_free=is_free
     )
     return await note_service.create_note(db, note_data, file, current_user, course_id)
+
+@router.patch("/{note_id}", response_model=NoteResponse)
+async def update_note(
+    note_id: UUID,
+    title: str | None = Form(None),
+    content: Optional[str] = Form(None),
+    is_free: bool | None = Form(None),
+    file: Optional[UploadFile] = File(None),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    note_data = NoteUpdate(
+        **{k: v for k, v in {"title": title, "content": content, "is_free": is_free}.items() if v is not None}
+    )
+    return await note_service.update_note(db, note_id, note_data, file, current_user)
+
+
+@router.delete("/{note_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_note(
+    note_id: UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await note_service.delete_note(db, note_id, current_user)
+
 
 @router.get("/courses/{course_id}", response_model=list[NoteResponse])
 async def get_notes_by_course(

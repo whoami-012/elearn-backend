@@ -21,6 +21,10 @@ class CourseUpdate(BaseModel):
     thumbnail_url: Optional[str] = None
 
 
+class FacultyAssignmentUpdate(BaseModel):
+    faculty_id: Optional[UUID] = None
+
+
 class CourseResponse(BaseModel):
     id: UUID
     title: str
