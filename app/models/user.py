@@ -17,6 +17,7 @@ class User(Base):
     role = Column(user_role_enum, nullable=False)
     auth_provider = Column(String(20), nullable=False, default="local")
     google_id = Column(String(255), unique=True, nullable=True)
+    apple_id = Column(String(255), unique=True, nullable=True)
     profile_image = Column(String(2048), nullable=True)
     email_verified = Column(Boolean, nullable=False, default=False)
     is_active = Column(Boolean, nullable=False, default=True)

@@ -59,6 +59,9 @@ class Settings:
     ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60"))   # Fix #8: cast to int
     REFRESH_TOKEN_EXPIRE_DAYS: int = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))        # Fix #5: new setting
     GOOGLE_CLIENT_ID: str = os.getenv("GOOGLE_CLIENT_ID", "").strip()
+    APPLE_CLIENT_IDS: tuple[str, ...] = tuple(
+        value.strip() for value in os.getenv("APPLE_CLIENT_IDS", "").split(",") if value.strip()
+    )
     AGORA_APP_ID: str = os.getenv("AGORA_APP_ID", "")
     AGORA_APP_CERTIFICATE: str = os.getenv("AGORA_APP_CERTIFICATE", "")
     LIVE_CLASS_EARLY_JOIN_MINUTES: int = int(os.getenv("LIVE_CLASS_EARLY_JOIN_MINUTES", "10"))

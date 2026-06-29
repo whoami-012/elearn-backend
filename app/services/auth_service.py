@@ -1,6 +1,7 @@
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, or_
-from jose import JWTError
+from jose import JWTError, jwk, jwt
+import httpx
 from google.auth.exceptions import GoogleAuthError
 from google.auth.transport import requests as google_requests
 from google.oauth2 import id_token as google_id_token
@@ -190,6 +191,69 @@ async def authenticate_google_user(db: AsyncSession, claims: dict) -> User:
             status_code=status.HTTP_409_CONFLICT,
             detail="Google account or email is already registered",
         )
+    await db.refresh(user)
+    return user
+
+
+def verify_apple_id_token(token: str) -> dict:
+    if not settings.APPLE_CLIENT_IDS:
+        raise HTTPException(status_code=503, detail="Apple Sign-In is not configured")
+    try:
+        header = jwt.get_unverified_header(token)
+        response = httpx.get("https://appleid.apple.com/auth/keys", timeout=10.0)
+        response.raise_for_status()
+        key_data = next(key for key in response.json()["keys"] if key["kid"] == header["kid"])
+        public_key = jwk.construct(key_data, algorithm="RS256").to_pem()
+        claims = None
+        for audience in settings.APPLE_CLIENT_IDS:
+            try:
+                claims = jwt.decode(token, public_key, algorithms=["RS256"], audience=audience,
+                                    issuer="https://appleid.apple.com")
+                break
+            except JWTError:
+                continue
+        if claims is None:
+            raise JWTError("Invalid audience")
+    except (KeyError, StopIteration, ValueError, JWTError, httpx.HTTPError):
+        raise HTTPException(status_code=401, detail="Invalid or expired Apple ID token")
+    if not claims.get("sub"):
+        raise HTTPException(status_code=401, detail="Invalid Apple token payload")
+    return claims
+
+
+async def authenticate_apple_user(db: AsyncSession, claims: dict,
+                                  first_name: str | None, last_name: str | None) -> User:
+    apple_id = claims["sub"]
+    email = claims.get("email")
+    filters = [User.apple_id == apple_id]
+    if email:
+        email = email.lower().strip()
+        filters.append(func.lower(User.email) == email)
+    result = await db.execute(select(User).where(or_(*filters)))
+    matches = result.scalars().all()
+    by_apple = next((item for item in matches if item.apple_id == apple_id), None)
+    by_email = next((item for item in matches if email and item.email.lower() == email), None)
+    if by_apple and by_email and by_apple.id != by_email.id:
+        raise HTTPException(status_code=409, detail="Apple account is already linked to another user")
+    user = by_apple or by_email
+    if user:
+        if not user.is_active or user.is_deleted:
+            raise HTTPException(status_code=403, detail="Account access denied")
+        user.apple_id = apple_id
+        user.email_verified = True
+    else:
+        if not email:
+            raise HTTPException(status_code=400, detail="Apple account did not provide an email address")
+        name = " ".join(part for part in (first_name, last_name) if part).strip()
+        user = User(email=email, name=name or email.split("@", 1)[0], password_hash=None,
+                    role="student", auth_provider="apple", apple_id=apple_id,
+                    email_verified=True)
+        db.add(user)
+    try:
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status_code=409, detail="Apple account or email is already registered")
     await db.refresh(user)
     return user
 

@@ -33,6 +33,16 @@ class GoogleLoginResponse(BaseModel):
     user: GoogleLoginUser
 
 
+class AppleLoginRequest(BaseModel):
+    id_token: str = Field(min_length=1)
+    first_name: str | None = None
+    last_name: str | None = None
+
+
+class AppleLoginResponse(GoogleLoginResponse):
+    message: str = "Apple login successful"
+
+
 # 🔹 Register Request
 class RegisterRequest(BaseModel):
     email: EmailStr
