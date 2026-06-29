@@ -82,8 +82,10 @@ class MessagingService:
             await self.repo.add_message(message)
             conversation.last_message = message
             await self.db.commit()
-            await self.db.refresh(message)
-            return message
+            created = await self.repo.get_message(message.id)
+            if created is None:
+                raise RuntimeError("Committed message could not be reloaded.")
+            return created
         except IntegrityError:
             await self.db.rollback()
             existing = await self.repo.get_idempotent_message(current_user.id, client_message_id)
