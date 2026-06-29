@@ -82,6 +82,17 @@ app.add_middleware(
 
 
 # ---------------------------------------------------------------------------
+# Referrer Policy Middleware
+# ---------------------------------------------------------------------------
+
+@app.middleware("http")
+async def add_referrer_policy_header(request, call_next):
+    response = await call_next(request)
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+    return response
+
+
+# ---------------------------------------------------------------------------
 # Routers
 # ---------------------------------------------------------------------------
 
