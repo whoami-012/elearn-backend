@@ -112,9 +112,11 @@ class UserPasswordRequest(BaseModel):
     @field_validator("new_password")
     @classmethod
     def validate_new_password(cls, v: str) -> str:
-        """Ensure the new password meets the minimum length requirement."""
+        """Ensure the new password meets the registration password rules."""
         if len(v) < 8:
-            raise ValueError("Weak password")
+            raise ValueError("Password must be at least 8 characters")
+        if not any(char.isupper() for char in v):
+            raise ValueError("Password must contain an uppercase letter")
         return v
 
 

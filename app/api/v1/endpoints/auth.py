@@ -10,13 +10,14 @@ from app.schemas.auth import (
     TokenResponse,
     RefreshTokenRequest,
 )
-from app.schemas.user import UserRead
+from app.schemas.user import UserPasswordRequest, UserRead
 from app.services.auth_service import (
     create_user,
     authenticate_user,
     create_tokens,
     refresh_access_token,
     authenticate_google_user,
+    change_password,
     verify_google_id_token,
 )
 from app.api.deps import get_current_user
@@ -67,3 +68,17 @@ async def refresh(payload: RefreshTokenRequest, db: AsyncSession = Depends(get_d
 @router.get("/me", response_model=UserRead)
 async def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/change-password", status_code=status.HTTP_204_NO_CONTENT)
+async def update_password(
+    payload: UserPasswordRequest,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    await change_password(
+        db,
+        current_user,
+        payload.current_password,
+        payload.new_password,
+    )
